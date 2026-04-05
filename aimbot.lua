@@ -1,169 +1,301 @@
--- [[ HARD LOCK V14 - FINAL OBFUSCATED + NOTIFY ]]
-local _0x52 = game; 
-local _0x1a = _0x52.GetService;
-local _0x4c = _0x1a(_0x52, string.char(80, 108, 97, 121, 101, 114, 115));
-local _0x72 = _0x1a(_0x52, string.char(82, 117, 110, 83, 101, 114, 118, 105, 99, 101));
-local _0x69 = _0x1a(_0x52, string.char(85, 115, 101, 114, 73, 110, 112, 117, 116, 83, 101, 114, 118, 105, 99, 101));
-local _0x56 = _0x1a(_0x52, string.char(86, 105, 114, 116, 117, 97, 108, 73, 110, 112, 117, 116, 77, 97, 110, 97, 103, 101, 114));
-local _0x21 = _0x4c.LocalPlayer; 
-local _0x88 = workspace.CurrentCamera;
+-- [[ SERVICES ]]
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local CoreGui = game:GetService("CoreGui")
 
--- [[ CẤU CƠ CHẾ ]]
-local _0xL = { _A = false, _S = false, _F = false, _NC = false, _SP = false, _E = true, _FS = 70, _CP = 0.8 }
-local _0xV = { 
-    _EB = true, _AA = false, _RD = 0.35, _SS = 0.02, _FV = 300, 
-    _TP = string.char(72, 101, 97, 100), 
-    _TA = string.char(84, 101, 97, 109, 73, 68), 
-    _SM = 1 
+-- [[ BIẾN HỆ THỐNG ]]
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local LastShootTime = 0 
+local RightClickHoldTime = 0 
+local LockedTarget = nil 
+
+-- BIẾN TÍNH NĂNG MỚI
+local AutoAimEnabled = false 
+local AutoShootEnabled = false 
+local InstantShoot = false -- Biến mới: Bắn ngay lập tức
+
+-- Biến tính năng bổ sung
+local Flying = false
+local SpeedEnabled = false
+local NoClip = false
+local EspEnabled = true
+local BV, BG 
+local FlySpeed = 70
+local CFrameSpeedPower = 0.8
+
+-- Cấu hình
+local Settings = {
+    AimbotEnabled = true,
+    AimAll = false,
+    AimReadyDelay = 0.35,
+    ShootSpeed = 0.02,
+    Fov = 300, 
+    TargetPart = "Head",
+    TeamAttribute = "TeamID",
+    GuiVisible = true,
+    Smoothing = 1 
 }
-local _0xT, _0xLS, _0xRH, _0xBV, _0xBG = nil, 0, 0, nil, nil;
-local _0xESP = {}
 
--- [[ HÀM HỆ THỐNG ]]
-local function _0xPH() 
-    if _0xBG then _0xBG:Destroy() _0xBG = nil end 
-    if _0xBV then _0xBV:Destroy() _0xBV = nil end
-    pcall(function() _0x21.Character.Humanoid.PlatformStand = false end)
-end
-
-local function _0xFL()
-    local _c = _0x21.Character; local _r = _c and _c:FindFirstChild(string.char(72, 117, 109, 97, 110, 111, 105, 100, 82, 111, 111, 116, 80, 97, 114, 116))
-    if _r then 
-        _0xPH(); _0xBG = Instance.new(string.char(66, 111, 100, 121, 71, 121, 114, 111), _r)
-        _0xBG.P = 9e4; _0xBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9); _0xBG.CFrame = _r.CFrame
-        _0xBV = Instance.new(string.char(66, 111, 100, 121, 86, 101, 108, 111, 99, 105, 116, 121), _r)
-        _0xBV.Velocity = Vector3.new(0,0,0); _0xBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        _c.Humanoid.PlatformStand = true 
+-- ==========================================
+-- [[ HỆ THỐNG VẬT LÝ & HỒI SINH ]]
+-- ==========================================
+local function CleanPhysics()
+    if BG then BG:Destroy(); BG = nil end
+    if BV then BV:Destroy(); BV = nil end
+    if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+        player.Character.Humanoid.PlatformStand = false
     end
 end
 
-local function _0xEE(_p) 
-    if _p == _0x21 then return end 
-    local _b = Drawing.new(string.char(83, 113, 117, 97, 114, 101)) _b.Thickness = 1; _b.Filled = false
-    local _t = Drawing.new(string.char(76, 105, 110, 101)) _t.Thickness = 1
-    _0xESP[_p] = {B = _b, T = _t} 
+local function EnableFly()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if root and hum then
+        CleanPhysics()
+        BG = Instance.new("BodyGyro", root)
+        BG.P = 9e4; BG.MaxTorque = Vector3.new(9e9, 9e9, 9e9); BG.CFrame = root.CFrame
+        BV = Instance.new("BodyVelocity", root)
+        BV.Velocity = Vector3.new(0,0,0); BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        hum.PlatformStand = true
+    end
 end
-for _, v in pairs(_0x4c:GetPlayers()) do _0xEE(v) end
-_0x4c.PlayerAdded:Connect(_0xEE)
 
-local function _0xVIS(_p)
-    local _c = _0x21.Character; if not _c or not _p then return false end
-    local _rp = RaycastParams.new(); _rp.FilterDescendantsInstances = {_c, _0x88, _p.Parent}; _rp.FilterType = Enum.RaycastFilterType.Exclude
-    return workspace:Raycast(_0x88.CFrame.Position, _p.Position - _0x88.CFrame.Position, _rp) == nil
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if Flying then EnableFly() end
+    local hum = char:WaitForChild("Humanoid")
+    hum.Died:Connect(function() CleanPhysics() end)
+end)
+
+-- ==========================================
+-- [[ HỆ THỐNG ESP ]]
+-- ==========================================
+local ESP_Table = {}
+local function CreateESP(v)
+    if v == player then return end
+    local Box = Drawing.new("Square")
+    Box.Thickness = 1; Box.Filled = false
+    local Tracer = Drawing.new("Line")
+    Tracer.Thickness = 1
+    ESP_Table[v] = {Box = Box, Tracer = Tracer}
+end
+for _, v in pairs(Players:GetPlayers()) do CreateESP(v) end
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(function(v)
+    if ESP_Table[v] then ESP_Table[v].Box:Remove(); ESP_Table[v].Tracer:Remove(); ESP_Table[v] = nil end
+end)
+
+-- ==========================================
+-- [[ GIAO DIỆN (GUI) ]]
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HardLock_V14_Final"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = CoreGui end)
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 220, 0, 320)
+MainFrame.Position = UDim2.new(0.8, 0, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Active = true; MainFrame.Draggable = true 
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35); Title.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Title.TextColor3 = Color3.new(1,1,1); Title.Text = "HARD LOCK V14 MOD"; Title.Font = Enum.Font.GothamBold
+
+local InfoLabel = Instance.new("TextLabel", MainFrame)
+InfoLabel.Size = UDim2.new(1, 0, 0, 270); InfoLabel.Position = UDim2.new(0, 0, 0, 40)
+InfoLabel.BackgroundTransparency = 1; InfoLabel.TextColor3 = Color3.new(0.8,0.8,0.8)
+InfoLabel.Font = Enum.Font.Gotham; InfoLabel.TextSize = 11; InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local function UpdateGUI()
+    MainFrame.Visible = Settings.GuiVisible
+    InfoLabel.Text = string.format([[
+  [F] Hard Lock: %s
+  [I] Auto Shoot: %s
+  [L] Mode: %s
+  [K] Target: %s
+  [U] Aimbot: %s
+  [J] ESP: %s
+  [E] Fly: %s (%d)
+  [C] NoClip: %s
+  [V] Speed: %s
+  [P] Hide Menu
+  ---
+  HP Check: ON
+  Target: %s]], 
+    AutoAimEnabled and "ON" or "OFF", 
+    AutoShootEnabled and "ON" or "OFF",
+    InstantShoot and "INSTANT" or "DELAY (0.3s)",
+    Settings.AimAll and "ALL" or "TEAM",
+    Settings.AimbotEnabled and "ON" or "OFF",
+    EspEnabled and "ON" or "OFF",
+    Flying and "ON" or "OFF", FlySpeed,
+    NoClip and "ON" or "OFF", SpeedEnabled and "ON" or "OFF",
+    LockedTarget and LockedTarget.Name or "None")
 end
 
-local function _0xGET()
-    local _m = _0x69:GetMouseLocation(); local _root = _0x21.Character and _0x21.Character:FindFirstChild(string.char(72, 117, 109, 97, 110, 111, 105, 100, 82, 111, 111, 116, 80, 97, 114, 116))
-    if not _root then return end local _cl, _mp = nil, -1
-    local _myt = tostring(_0x21:GetAttribute(_0xV._TA))
-    for _, v in pairs(_0x4c:GetPlayers()) do
-        if v ~= _0x21 and v.Character and v.Character:FindFirstChild(_0xV._TP) then
-            local _tt = tostring(v:GetAttribute(_0xV._TA))
-            if not _0xV._AA and _tt == _myt then continue end
-            local _h = v.Character:FindFirstChildOfClass(string.char(72, 117, 109, 97, 110, 111, 105, 100))
-            if _h and _h.Health > 0 and _0xVIS(v.Character[_0xV._TP]) then
-                local _ps, _os = _0x88:WorldToViewportPoint(v.Character[_0xV._TP].Position)
-                if _os then
-                    local _d = (Vector2.new(_ps.X, _ps.Y) - _m).Magnitude
-                    if _d <= _0xV._FV then 
-                        local _wd = (v.Character[_0xV._TP].Position - _root.Position).Magnitude
-                        local _p = (1/(_d+1))*5000 + (1/(_wd+1))*10000; if _p > _mp then _mp = _p; _cl = v end 
+-- ==========================================
+-- [[ LOGIC TÌM MỤC TIÊU ]]
+-- ==========================================
+local function IsVisible(targetPart)
+    local char = player.Character
+    if not char or not targetPart then return false end
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {char, camera, targetPart.Parent}
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local res = workspace:Raycast(camera.CFrame.Position, targetPart.Position - camera.CFrame.Position, params)
+    return res == nil
+end
+
+local function GetBestTarget()
+    local mouseLoc = UserInputService:GetMouseLocation()
+    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+    local closest, maxP = nil, -1 
+    local myTeam = tostring(player:GetAttribute(Settings.TeamAttribute))
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= player and v.Character and v.Character:FindFirstChild(Settings.TargetPart) then
+            local targetTeam = tostring(v:GetAttribute(Settings.TeamAttribute))
+            if not Settings.AimAll and targetTeam == myTeam then continue end
+            
+            local hum = v.Character:FindFirstChildOfClass("Humanoid")
+            if not hum or hum.Health <= 0 then continue end
+            
+            local part = v.Character[Settings.TargetPart]
+            if IsVisible(part) then
+                local pos, onS = camera:WorldToViewportPoint(part.Position)
+                if onS then
+                    local mouseDist = (Vector2.new(pos.X, pos.Y) - mouseLoc).Magnitude
+                    if mouseDist <= Settings.Fov then
+                        local worldDist = (part.Position - myRoot.Position).Magnitude
+                        local p = (1 / (mouseDist + 1)) * 5000 + (1 / (worldDist + 1)) * 10000 
+                        if p > maxP then maxP = p; closest = v end
                     end
                 end
             end
         end
-    end return _cl
+    end
+    return closest
 end
 
--- [[ GIAO DIỆN RAYFIELD ]]
-local _RY = loadstring(game:HttpGet(string.char(104, 116, 116, 112, 115, 58, 47, 47, 115, 105, 114, 105, 117, 115, 46, 109, 101, 110, 117, 47, 114, 97, 121, 102, 105, 101, 108, 100)))()
-local _W = _RY:CreateWindow({Name = "HARD LOCK V14 [HP+TEAM]", LoadingTitle = "System Encrypted", ConfigurationSaving = {Enabled = false}})
-local _M = _W:CreateTab("Main"); local _V = _W:CreateTab("Visuals"); local _P = _W:CreateTab("Physic")
-
--- Hàm hiện thông báo góc màn hình
-local function _0xNOTI(_title, _state)
-    _RY:Notify({
-        Title = _title,
-        Content = _state and "Trạng thái: BẬT (ON)" or "Trạng thái: TẮT (OFF)",
-        Duration = 2.5,
-        Image = 4483362458,
-    })
-end
-
-_M:CreateToggle({Name = "Hard Lock (F)", CurrentValue = false, Callback = function(v) _0xL._A = v end})
-_M:CreateToggle({Name = "Auto Shoot (I)", CurrentValue = false, Callback = function(v) _0xL._S = v end})
-_M:CreateToggle({Name = "Aim All (K)", CurrentValue = false, Callback = function(v) _0xV._AA = v; _0xT = nil end})
-_P:CreateToggle({Name = "Fly (E)", CurrentValue = false, Callback = function(v) _0xL._F = v; if v then _0xFL() else _0xPH() end end})
-_P:CreateToggle({Name = "NoClip (C)", CurrentValue = false, Callback = function(v) _0xL._NC = v end})
-_P:CreateToggle({Name = "Speed (V)", CurrentValue = false, Callback = function(v) _0xL._SP = v end})
-_V:CreateToggle({Name = "ESP (J)", CurrentValue = true, Callback = function(v) _0xL._E = v end})
-
+-- ==========================================
 -- [[ VÒNG LẶP CHÍNH ]]
-_0x72.RenderStepped:Connect(function()
-    local _c = _0x21.Character; local _r = _c and _c:FindFirstChild(string.char(72, 117, 109, 97, 110, 111, 105, 100, 82, 111, 111, 116, 80, 97, 114, 116))
-    local _myt = tostring(_0x21:GetAttribute(_0xV._TA))
+-- ==========================================
+RunService.RenderStepped:Connect(function()
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-    -- ESP Logic
-    for p, d in pairs(_0xESP) do
-        if _0xL._E and p.Character and p.Character:FindFirstChild(string.char(72, 117, 109, 97, 110, 111, 105, 100, 82, 111, 111, 116, 80, 97, 114, 116)) and p.Character.Humanoid.Health > 0 then
-            local _ps, _os = _0x88:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-            if _os then
-                d.B.Visible = true; d.B.Size = Vector2.new(2000/_ps.Z, 3000/_ps.Z); d.B.Position = Vector2.new(_ps.X - d.B.Size.X/2, _ps.Y - d.B.Size.Y/2)
-                d.T.Visible = true; d.T.From = Vector2.new(_0x88.ViewportSize.X/2, _0x88.ViewportSize.Y); d.T.To = Vector2.new(_ps.X, _ps.Y)
-                local _tt = tostring(p:GetAttribute(_0xV._TA)); local _col = (_tt == _myt) and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-                d.B.Color = _col; d.T.Color = _col
-            else d.B.Visible = false; d.T.Visible = false end
-        else d.B.Visible = false; d.T.Visible = false end
+    -- ESP
+    local myTeam = tostring(player:GetAttribute(Settings.TeamAttribute))
+    for p, draw in pairs(ESP_Table) do
+        local tChar = p.Character
+        local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+        local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
+        if EspEnabled and tRoot and tHum and tHum.Health > 0 then
+            local pos, visible = camera:WorldToViewportPoint(tRoot.Position)
+            if visible then
+                draw.Box.Visible = true; draw.Box.Size = Vector2.new(2000 / pos.Z, 3000 / pos.Z)
+                draw.Box.Position = Vector2.new(pos.X - draw.Box.Size.X / 2, pos.Y - draw.Box.Size.Y / 2)
+                draw.Tracer.Visible = true; draw.Tracer.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y); draw.Tracer.To = Vector2.new(pos.X, pos.Y)
+                local targetTeam = tostring(p:GetAttribute(Settings.TeamAttribute))
+                local color = (targetTeam == myTeam) and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+                draw.Box.Color = color; draw.Tracer.Color = color
+            else draw.Box.Visible = false; draw.Tracer.Visible = false end
+        else draw.Box.Visible = false; draw.Tracer.Visible = false end
     end
 
-    -- Aim & Shoot Logic
-    if (_0xL._A or _0x69:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)) and _0xV._EB then
-        if _0xRH == 0 then _0xRH = tick() end
-        if _0xT then 
-            local _h = _0xT.Character and _0xT.Character:FindFirstChildOfClass(string.char(72, 117, 109, 97, 110, 111, 105, 100))
-            if not _h or _h.Health <= 0 or not _0xVIS(_0xT.Character[_0xV._TP]) then _0xT = nil end
-        end
-        if not _0xT then _0xT = _0xGET() end
-        if _0xT and _0xT.Character then
-            _0x88.CFrame = _0x88.CFrame:Lerp(CFrame.new(_0x88.CFrame.Position, _0xT.Character[_0xV._TP].Position), _0xV._SM)
-            if _0xL._S and (tick()-_0xRH) >= _0xV._RD and (tick()-_0xLS) >= _0xV._SS then
-                _0xLS = tick(); _0x56:SendMouseButtonEvent(_0x88.ViewportSize.X/2, _0x88.ViewportSize.Y/2, 0, true, game, 0)
-                task.wait(0.01) _0x56:SendMouseButtonEvent(_0x88.ViewportSize.X/2, _0x88.ViewportSize.Y/2, 0, false, game, 0)
+    -- AIMBOT & AUTO SHOOT
+    local IsAiming = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) or AutoAimEnabled
+    
+    if IsAiming and Settings.AimbotEnabled then
+        if RightClickHoldTime == 0 then RightClickHoldTime = tick() end
+        
+        if LockedTarget then
+            local tHum = LockedTarget.Character and LockedTarget.Character:FindFirstChildOfClass("Humanoid")
+            if not tHum or tHum.Health <= 0 or not IsVisible(LockedTarget.Character[Settings.TargetPart]) then
+                LockedTarget = nil
             end
         end
-    else _0xRH = 0; if not _0xL._A then _0xT = nil end end
 
-    -- Physics (Fly/Speed/NoClip)
-    if _0xL._F and _0xBV and _0xBG and _r then
-        local _d = Vector3.new(0,0,0)
-        if _0x69:IsKeyDown(Enum.KeyCode.W) then _d = _d + _0x88.CFrame.LookVector end
-        if _0x69:IsKeyDown(Enum.KeyCode.S) then _d = _d - _0x88.CFrame.LookVector end
-        if _0x69:IsKeyDown(Enum.KeyCode.A) then _d = _d - _0x88.CFrame.RightVector end
-        if _0x69:IsKeyDown(Enum.KeyCode.D) then _d = _d + _0x88.CFrame.RightVector end
-        _0xBV.Velocity = _d.Unit * _0xL._FS; if _d.Magnitude == 0 then _0xBV.Velocity = Vector3.new(0,0,0) end
-        _0xBG.CFrame = _0x88.CFrame
+        if not LockedTarget then LockedTarget = GetBestTarget() end
+        
+        if LockedTarget and LockedTarget.Character then
+            local targetPart = LockedTarget.Character[Settings.TargetPart]
+            camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, targetPart.Position), Settings.Smoothing)
+            
+            -- LOGIC BẮN TỰ ĐỘNG
+            if AutoShootEnabled then
+                local canShoot = false
+                if InstantShoot then
+                    -- Bắn ngay lập tức không chờ
+                    canShoot = (tick() - LastShootTime) >= Settings.ShootSpeed
+                else
+                    -- Bắn có độ trễ 0.3s sau khi nhắm
+                    canShoot = (tick() - RightClickHoldTime) >= Settings.AimReadyDelay and (tick() - LastShootTime) >= Settings.ShootSpeed
+                end
+
+                if canShoot then
+                    LastShootTime = tick()
+                    VirtualInputManager:SendMouseButtonEvent(camera.ViewportSize.X/2, camera.ViewportSize.Y/2, 0, true, game, 0)
+                    task.wait(0.01)
+                    VirtualInputManager:SendMouseButtonEvent(camera.ViewportSize.X/2, camera.ViewportSize.Y/2, 0, false, game, 0)
+                end
+            end
+        end
+    else 
+        RightClickHoldTime = 0
+        if not AutoAimEnabled then LockedTarget = nil end 
     end
-    if _0xL._SP and _r and not _0xL._F then _r.CFrame = _r.CFrame + (_c.Humanoid.MoveDirection * _0xL._CP) end
-    if _0xL._NC and _c then for _, p in pairs(_c:GetDescendants()) do if p:IsA(string.char(66, 97, 115, 101, 80, 97, 114, 116)) then p.CanCollide = false end end end
+
+    -- FLY & SPEED
+    if Flying and BV and BG and root then
+        local dir = Vector3.new(0,0,0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, 1, 0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir -= Vector3.new(0, 1, 0) end
+        BV.Velocity = dir.Unit * FlySpeed
+        if dir.Magnitude == 0 then BV.Velocity = Vector3.new(0,0,0) end
+        BG.CFrame = camera.CFrame
+    end
+    if SpeedEnabled and root and hum and not Flying and hum.MoveDirection.Magnitude > 0 then
+        root.CFrame = root.CFrame + (hum.MoveDirection * CFrameSpeedPower)
+    end
+    if NoClip and char then
+        for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
+    end
 end)
 
--- [[ HOTKEYS SYNC + NOTIFY ]]
-_0x69.InputBegan:Connect(function(_i, _p)
-    if _p then return end
-    local _k = _i.KeyCode
-    if _k == Enum.KeyCode.F then 
-        _0xL._A = not _0xL._A; _0xNOTI("Auto Lock", _0xL._A)
-    elseif _k == Enum.KeyCode.I then 
-        _0xL._S = not _0xL._S; _0xNOTI("Auto Shoot", _0xL._S)
-    elseif _k == Enum.KeyCode.K then 
-        _0xV._AA = not _0xV._AA; _0xT = nil; _0xNOTI("Aim All Mode", _0xV._AA)
-    elseif _k == Enum.KeyCode.E then 
-        _0xL._F = not _0xL._F; if _0xL._F then _0xFL() else _0xPH() end; _0xNOTI("Fly Mode", _0xL._F)
-    elseif _k == Enum.KeyCode.C then 
-        _0xL._NC = not _0xL._NC; _0xNOTI("NoClip", _0xL._NC)
-    elseif _k == Enum.KeyCode.V then 
-        _0xL._SP = not _0xL._SP; _0xNOTI("Speed Power", _0xL._SP)
-    elseif _k == Enum.KeyCode.J then 
-        _0xL._E = not _0xL._E; _0xNOTI("ESP Visuals", _0xL._E) 
+-- [[ HOTKEYS ]]
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    local key = input.KeyCode
+    if key == Enum.KeyCode.F then AutoAimEnabled = not AutoAimEnabled; LockedTarget = nil
+    elseif key == Enum.KeyCode.I then AutoShootEnabled = not AutoShootEnabled
+    elseif key == Enum.KeyCode.L then InstantShoot = not InstantShoot -- Phím L để đổi chế độ bắn
+    elseif key == Enum.KeyCode.U then Settings.AimbotEnabled = not Settings.AimbotEnabled
+    elseif key == Enum.KeyCode.K then Settings.AimAll = not Settings.AimAll; LockedTarget = nil
+    elseif key == Enum.KeyCode.P then Settings.GuiVisible = not Settings.GuiVisible
+    elseif key == Enum.KeyCode.J then EspEnabled = not EspEnabled
+    elseif key == Enum.KeyCode.E then 
+        Flying = not Flying
+        if Flying then EnableFly() else CleanPhysics() end
+    elseif key == Enum.KeyCode.C then NoClip = not NoClip
+    elseif key == Enum.KeyCode.V then SpeedEnabled = not SpeedEnabled
+    elseif key == Enum.KeyCode.Plus or key == Enum.KeyCode.Equals then FlySpeed += 10
+    elseif key == Enum.KeyCode.Minus then FlySpeed = math.max(10, FlySpeed - 10)
     end
+    UpdateGUI()
 end)
+
+UpdateGUI()
